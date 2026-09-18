@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Receipt Scanner — Scan & Copy Receipts</title>
+  <meta name="description" content="Modern AI-powered web app for parsing receipts from photos with quick copy and structured export options.">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- CSS -->
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Glassmorphic Background Spheres -->
+  <div class="bg-glow bg-glow-1"></div>
+  <div class="bg-glow bg-glow-2"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-logo">
+        <div class="logo-icon">🧾</div>
+        <h1>Receipt Scanner <span class="badge-ai">Gemini AI</span></h1>
+      </div>
+      
+      <!-- API Key Widget -->
+      <div class="api-key-container">
+        <button id="btn-api-settings" class="btn-icon-text" aria-label="API Key Settings">
+          <span class="status-indicator status-off" id="api-status-dot"></span>
+          <span id="api-status-text">Enter API Key</span>
+          <span class="icon-gear">⚙️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main">
+      <!-- Left Column: Upload & Control -->
+      <section class="panel-section upload-section" id="upload-panel">
+        <div class="panel-header">
+          <h2>1. Upload Receipt</h2>
+          <p class="panel-subtitle">Select a receipt photo or take a picture</p>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="drop-zone" class="drop-zone">
+          <input type="file" id="file-input" accept="image/*" class="file-input-hidden" aria-label="Select receipt image file">
+          <div class="drop-zone-content">
+            <div class="drop-icon">📸</div>
+            <p class="drop-title">Drag & drop receipt photo here</p>
+            <p class="drop-or">or</p>
+            <button type="button" id="btn-browse" class="btn btn-secondary">Browse Files</button>
+            <button type="button" id="btn-camera" class="btn btn-secondary btn-camera">
+              <span>Take Photo</span> 📷
+            </button>
+            <p class="drop-hint">Supports PNG, JPEG, WebP. You can also paste from clipboard (Ctrl+V/Cmd+V).</p>
+          </div>
+        </div>
+
+        <!-- Preview Zone (Hidden by default) -->
+        <div id="preview-zone" class="preview-zone hidden">
+          <div class="preview-wrapper">
+            <img id="receipt-preview" src="#" alt="Receipt Preview">
+            <!-- Glowing Scan Laser Line -->
+            <div id="scan-laser" class="scan-laser hidden"></div>
+          </div>
+          <div class="preview-controls">
+            <button type="button" id="btn-rotate" class="btn-action" title="Rotate 90°">🔄 Rotate</button>
+            <button type="button" id="btn-change-image" class="btn-action btn-danger">🗑️ Remove</button>
+          </div>
+        </div>
+
+        <!-- Control Action Bar -->
+        <div class="control-actions">
+          <button type="button" id="btn-scan" class="btn btn-primary btn-large btn-glow" disabled>
+            <span>Scan Receipt</span> ✨
+          </button>
+        </div>
+      </section>
+
+      <!-- Right Column: Results -->
+      <section class="panel-section results-section" id="results-panel">
+        <div class="panel-header">
+          <h2>2. Scan Results</h2>
+          <p class="panel-subtitle">Receipt data extracted by artificial intelligence</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="results-empty" class="results-empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>Waiting for Image</h3>
+          <p>Upload a receipt photo and click "Scan Receipt" to view detailed information.</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="results-loading" class="results-loading-state hidden">
+          <div class="loading-spinner"></div>
+          <h3>AI is analyzing receipt...</h3>
+          <p>Please wait. Gemini is recognizing items, prices, and receipt structure.</p>
+          
+          <!-- Mock parsing items representation -->
+          <div class="skeleton-receipt">
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line subtitle"></div>
+            <div class="skeleton-line text"></div>
+            <div class="skeleton-line text"></div>
+            <div class="skeleton-line text"></div>
+          </div>
+        </div>
+
+        <!-- Content Output State (Hidden by default) -->
+        <div id="results-content" class="results-content-wrapper hidden">
+          <!-- Result Tabs Header -->
+          <div class="tabs-header">
+            <button class="tab-btn active" data-tab="tab-structured">Table</button>
+            <button class="tab-btn" data-tab="tab-markdown">Markdown Text</button>
+            <button class="tab-btn" data-tab="tab-csv">CSV (for Excel)</button>
+            <button class="tab-btn" data-tab="tab-raw">Raw Text</button>
+          </div>
+
+          <!-- Tabs Content Panels -->
+          <div class="tabs-content">
+            <!-- 1. Structured Tab -->
+            <div id="tab-structured" class="tab-pane active">
+              <!-- Summary Grid -->
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <span class="card-label">Store</span>
+                  <div class="card-value-container">
+                    <span class="card-value" id="res-store">Store Name</span>
+                    <button class="btn-copy-small" data-copy-target="res-store" title="Copy store name">📋</button>
+                  </div>
+                </div>
+                <div class="summary-card">
+                  <span class="card-label">Date & Time</span>
+                  <div class="card-value-container">
+                    <span class="card-value" id="res-datetime">--.--.---- --:--</span>
+                    <button class="btn-copy-small" data-copy-target="res-datetime" title="Copy date">📋</button>
+                  </div>
+                </div>
+                <div class="summary-card highlight">
+                  <span class="card-label">Total Amount</span>
+                  <div class="card-value-container">
+                    <span class="card-value" id="res-total">0.00</span>
+                    <button class="btn-copy-small" data-copy-target="res-total" title="Copy total">📋</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Extra metadata -->
+              <div class="metadata-row">
+                <span><strong>Country:</strong> <span id="res-country">--</span> <button class="btn-copy-small" data-copy-target="res-country" title="Copy country">📋</button></span>
+                <span><strong>Address:</strong> <span id="res-address">--</span> <button class="btn-copy-small" data-copy-target="res-address" title="Copy address">📋</button></span>
+                <span><strong>Payment:</strong> <span id="res-payment">--</span> <button class="btn-copy-small" data-copy-target="res-payment" title="Copy payment">📋</button></span>
+              </div>
+
+              <!-- Items Table -->
+              <div class="table-container">
+                <table class="items-table" id="res-table">
+                  <thead>
+                    <tr>
+                      <th>Item Name</th>
+                      <th class="text-right">Qty</th>
+                      <th class="text-right">Base Price</th>
+                      <th class="text-right">Discount</th>
+                      <th class="text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="res-table-body">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Discount Analysis Panel -->
+              <div id="discount-analysis-panel" class="discount-analysis-card hidden">
+                <h4>Receipt Discount Analysis 🏷️</h4>
+                <div class="discount-details">
+                  <ul id="discount-list" class="discount-list">
+                    <!-- Dynamic list of discounts -->
+                  </ul>
+                </div>
+                <div class="analysis-result-box" id="discount-analysis-text">
+                  <!-- Verification calculation result -->
+                </div>
+              </div>
+
+              <div class="action-buttons-group">
+                <button type="button" id="btn-copy-items" class="btn btn-primary">Copy Items List 📋</button>
+              </div>
+            </div>
+
+            <!-- 2. Markdown Tab -->
+            <div id="tab-markdown" class="tab-pane">
+              <div class="textarea-wrapper">
+                <button class="btn-copy-absolute" id="btn-copy-md" title="Copy Markdown text">Copy 📋</button>
+                <pre class="formatted-pre"><code id="code-markdown"></code></pre>
+              </div>
+            </div>
+
+            <!-- 3. CSV Tab -->
+            <div id="tab-csv" class="tab-pane">
+              <div class="textarea-wrapper">
+                <button class="btn-copy-absolute" id="btn-copy-csv" title="Copy CSV text">Copy 📋</button>
+                <pre class="formatted-pre"><code id="code-csv"></code></pre>
+              </div>
+            </div>
+
+            <!-- 4. Raw Tab -->
+            <div id="tab-raw" class="tab-pane">
+              <div class="textarea-wrapper">
+                <button class="btn-copy-absolute" id="btn-copy-raw" title="Copy original text">Copy 📋</button>
+                <pre class="formatted-pre"><code id="code-raw"></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- History Drawer / Section -->
+    <section class="panel-section history-section">
+      <div class="panel-header-row">
+        <div>
+          <h2>Scan History</h2>
+          <p class="panel-subtitle">Recently recognized receipts saved locally</p>
+        </div>
+        <button id="btn-clear-history" class="btn btn-danger-link hidden">Clear History 🗑️</button>
+      </div>
+      
+      <div class="history-list" id="history-container">
+        <!-- Dynamic History Cards -->
+        <p class="history-empty" id="history-empty-text">History is empty. Your scanned receipts will appear here.</p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Powered by AI. Your images and API keys are processed strictly in your browser and sent directly to the Google Gemini API.</p>
+    </footer>
+  </div>
+
+  <!-- Settings Dialog (API Key Input) -->
+  <dialog id="api-dialog" class="api-dialog glass">
+    <form method="dialog" class="dialog-form">
+      <div class="dialog-header">
+        <h3>Gemini API Key Settings</h3>
+        <button type="button" class="btn-close-dialog" onclick="document.getElementById('api-dialog').close()">×</button>
+      </div>
+      
+      <div class="dialog-body">
+        <p>Receipt parsing uses a free or paid API key from <strong>Google Gemini Developer API</strong>.</p>
+        <ol class="setup-steps">
+          <li>Go to <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>.</li>
+          <li>Create a free API Key (Get API Key).</li>
+          <li>Paste the key into the field below. It will be stored locally in your browser.</li>
+        </ol>
+
+        <div class="form-group">
+          <label for="input-api-key">Gemini API Key:</label>
+          <input type="password" id="input-api-key" placeholder="AIzaSy..." autocomplete="off">
+        </div>
+      </div>
+      
+      <div class="dialog-footer">
+        <button type="button" id="btn-save-api" class="btn btn-primary">Save Key</button>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('api-dialog').close()">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden">
+    <span id="toast-message">Notification</span>
+  </div>
+
+  <!-- Camera Dialog for Live Capture -->
+  <dialog id="camera-dialog" class="camera-dialog glass">
+    <div class="dialog-form">
+      <div class="dialog-header">
+        <h3>Take a Receipt Photo</h3>
+        <button type="button" class="btn-close-dialog" id="btn-close-camera">×</button>
+      </div>
+      <div class="dialog-body camera-body">
+        <video id="camera-stream" autoplay playsinline></video>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+      </div>
+      <div class="dialog-footer camera-footer">
+        <button type="button" id="btn-capture-photo" class="btn btn-primary">Take Photo 📸</button>
+        <button type="button" id="btn-cancel-camera" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- JS Entry -->
+  <script type="module" src="/main.js"></script>
+</body>
+</html>
